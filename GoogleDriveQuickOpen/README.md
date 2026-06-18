@@ -30,7 +30,7 @@ O padrao atual e remover os arquivos temporarios apos **24 horas**.
 Voce pode ajustar por parametro:
 
 ```powershell
-python "C:\Users\igor\OneDrive\Documentos\Windows Apps\GoogleDriveQuickOpen\open_in_google.py" --retention-hours 0.5 "C:\caminho\planilha.xlsx"
+python "C:\caminho\seu-projeto\GoogleDriveQuickOpen\open_in_google.py" --retention-hours 0.5 "C:\caminho\planilha.xlsx"
 ```
 
 Ou deixar sem remocao automatica:
@@ -55,7 +55,7 @@ python "...\\open_in_google.py" --temp-folder "Rascunhos Docs" "C:\caminho\arqui
 6. Baixe o JSON e salve como:
 
 ```text
-C:\Users\igor\OneDrive\Documentos\Windows Apps\GoogleDriveQuickOpen\client_secret.json
+C:\caminho\seu-projeto\GoogleDriveQuickOpen\client_secret.json
 ```
 
 > Voce tambem pode usar variaveis de ambiente `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`, mas o JSON e mais simples.
@@ -63,7 +63,7 @@ C:\Users\igor\OneDrive\Documentos\Windows Apps\GoogleDriveQuickOpen\client_secre
 ## 4) Instalar o launcher no Windows
 
 ```powershell
-cd "C:\Users\igor\OneDrive\Documentos\Windows Apps\GoogleDriveQuickOpen"
+cd "$env:USERPROFILE\OneDrive\Documentos\Windows Apps\GoogleDriveQuickOpen"
 .\install.ps1
 ```
 
@@ -98,3 +98,55 @@ Os icones de arquivo tambem sao atualizados com os icones oficiais do Google Doc
 
 - Configuracao/estado: `%LOCALAPPDATA%\GoogleDriveQuickOpen\state.json`
 - Log: `%LOCALAPPDATA%\GoogleDriveQuickOpen\launcher.log`
+
+## 7) Guia para quem quiser testar em outro PC
+
+Se voce quer testar este projeto no seu computador, siga exatamente estes passos:
+
+1) Tenha Python 3.x instalado.
+
+2) Baixe o projeto (ou clone):
+
+```powershell
+git clone https://github.com/igorbarazzetti/Google-Suite-Quick-Open.git
+cd Google-Suite-Quick-Open\GoogleDriveQuickOpen
+```
+
+3) Crie as credenciais do Google OAuth (necessario para qualquer teste real):
+
+- Entre no Google Cloud Console.
+- Crie um projeto e habilite a Google Drive API.
+- Gere um OAuth Client de tipo **Desktop app**.
+- Baixe o arquivo `client_secret.json` e cole ao lado do `open_in_google.py`.
+
+Sem esse arquivo, o app nao abre no Google (pede as credenciais e para).
+
+4) Instale e registre as associacoes:
+
+```powershell
+.\install.ps1
+```
+
+5) Teste:
+
+- Feche e abra novamente o Explorer (ou reinicie a sessao).
+- Dê duplo clique em um `.docx`, `.xlsx` ou `.pptx`.
+- O arquivo deve abrir no navegador em Docs/Sheets/Slides.
+
+6) Se a associacao nao funcionar na primeira vez:
+
+- Acesse Configuracoes > Apps > Apps padrao.
+- Defina `.docx`, `.doc`, `.xlsx`, `.xls`, `.ppt`, `.pptx` para "Google Suite Quick Open".
+- Reinicie o Explorer se necessario (`taskkill /f /im explorer.exe` e abra de novo).
+
+7) Desinstalar (caso precise):
+
+```powershell
+%LOCALAPPDATA%\GoogleDriveQuickOpen\uninstall.ps1
+```
+
+Notas para compartilhamento:
+
+- O app abre usando sua conta Google local; nao funciona compartilhado por outra conta.
+- Os arquivos sao enviados para o Google Drive do usuario logado.
+- O tempo de retencao padrao e 24h, mas voce pode alterar com `--retention-hours`.

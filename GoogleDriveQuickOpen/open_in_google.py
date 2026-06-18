@@ -36,7 +36,7 @@ DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file"
 TEMP_FOLDER_DEFAULT = os.environ.get("GD_QUICKOPEN_TEMP_FOLDER", f"{APP_NAME} Temp")
 try:
-DEFAULT_RETENTION_HOURS = int(os.environ.get("GD_QUICKOPEN_RETENTION_HOURS", "0"))
+    DEFAULT_RETENTION_HOURS = int(os.environ.get("GD_QUICKOPEN_RETENTION_HOURS", "0"))
 except ValueError:
     DEFAULT_RETENTION_HOURS = 24
 FOLDER_MIME = "application/vnd.google-apps.folder"
@@ -73,7 +73,7 @@ def save_state(state: Dict[str, Any]) -> None:
 
 def error(msg: str) -> int:
     log(msg)
-        print(msg, file=sys.stderr)
+    print(msg, file=sys.stderr)
     try:
         import ctypes
 
