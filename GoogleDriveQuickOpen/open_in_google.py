@@ -14,7 +14,7 @@ import time
 import urllib.parse
 import urllib.request
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -184,6 +184,10 @@ def parse_drive_time(value: str) -> Optional[float]:
         return None
 
 
+def drive_time_iso(ts: float) -> str:
+    return datetime.fromtimestamp(ts, tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def ensure_token(state: Dict[str, Any], client_id: str, client_secret: str) -> str:
     token = state.get("token") or {}
     now = time.time()
@@ -304,6 +308,17 @@ def ensure_token(state: Dict[str, Any], client_id: str, client_secret: str) -> s
 def file_key(path: Path) -> str:
     normalized = str(path.resolve())
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def file_sha256(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def safe_upload_filename(file_path: Path) -> str:
@@ -462,14 +477,15 @@ def cleanup_temp_folder(token: str, folder_id: str, retention_hours: float, stat
         return 0
 
     cutoff = time.time() - (retention_hours * 3600)
+    cutoff_iso = drive_time_iso(cutoff)
     deleted_files = []
-    query = f"'{folder_id}' in parents and trashed=false"
+    query = f"'{folder_id}' in parents and trashed = false and createdTime < '{cutoff_iso}'"
     page_token = None
 
     while True:
         params: Dict[str, str] = {
             "q": query,
-            "fields": "files(id,name,createdTime,modifiedTime),nextPageToken",
+            "fields": "files(id,name),nextPageToken",
             "pageSize": "1000",
         }
         if page_token:
@@ -477,12 +493,10 @@ def cleanup_temp_folder(token: str, folder_id: str, retention_hours: float, stat
         response = http_request_json("GET", build_url(params), token)
 
         for item in response.get("files", []):
-            created_at = parse_drive_time(item.get("createdTime") or item.get("modifiedTime"))
-            if created_at is None or created_at < cutoff:
-                file_id = item.get("id")
-                if file_id:
-                    delete_drive_file(token, file_id)
-                    deleted_files.append(file_id)
+            file_id = item.get("id")
+            if file_id:
+                delete_drive_file(token, file_id)
+                deleted_files.append(file_id)
 
         page_token = response.get("nextPageToken")
         if not page_token:
@@ -568,7 +582,8 @@ def main() -> int:
             "sheet": "application/vnd.google-apps.spreadsheet",
             "slide": "application/vnd.google-apps.presentation",
         }[kind]
-        temp_folder_id = ensure_temp_folder(token, state, args.temp_folder.strip() or TEMP_FOLDER_DEFAULT)
+        temp_folder_name = args.temp_folder.strip() or TEMP_FOLDER_DEFAULT
+        temp_folder_id = ensure_temp_folder(token, state, temp_folder_name)
         if not args.no_cleanup and should_run_cleanup(state, args.retention_hours):
             removed = cleanup_temp_folder(token, temp_folder_id, args.retention_hours, state)
             if removed:
@@ -579,6 +594,8 @@ def main() -> int:
         cached = state.get("files", {}).get(key, {})
         current_mtime = int(file_path.stat().st_mtime)
         current_size = file_path.stat().st_size
+        current_hash: Optional[str] = cached.get("sha256")
+        cached_hash = cached.get("sha256")
         existing = cached.get("file_id") if not args.no_cache else None
         file_id: Optional[str] = None
 
@@ -587,36 +604,55 @@ def main() -> int:
                 previous_mtime = int(cached.get("mtime", -1))
                 previous_size = int(cached.get("size", -1))
                 if current_mtime != previous_mtime or current_size != previous_size:
-                    try:
-                        file_id = upload_to_drive(token, file_path, target_mime, temp_folder_id, existing_id=existing)
-                    except Exception as exc:
-                        if not needs_upload_retry(exc, temp_folder_id):
-                            raise
-                        temp_folder_id = ensure_temp_folder(token, state, args.temp_folder.strip() or TEMP_FOLDER_DEFAULT)
-                        file_id = upload_to_drive(token, file_path, target_mime, temp_folder_id, existing_id=existing)
+                    if cached_hash is not None:
+                        current_hash = file_sha256(file_path)
+                        if cached_hash == current_hash:
+                            file_id = existing
+                        else:
+                            file_id = upload_to_drive(
+                                token,
+                                file_path,
+                                target_mime,
+                                temp_folder_id,
+                                existing_id=existing,
+                            )
+                    else:
+                        file_id = upload_to_drive(
+                            token,
+                            file_path,
+                            target_mime,
+                            temp_folder_id,
+                            existing_id=existing,
+                        )
                 else:
                     file_id = existing
+                    if cached_hash is None:
+                        current_hash = file_sha256(file_path)
             except Exception:
                 existing = None
 
         if not file_id:
             try:
+                if current_hash is None and not args.no_cache:
+                    current_hash = file_sha256(file_path)
                 file_id = upload_to_drive(token, file_path, target_mime, temp_folder_id, existing_id=None)
             except Exception as exc:
                 if not needs_upload_retry(exc, temp_folder_id):
                     raise
-                temp_folder_id = ensure_temp_folder(token, state, args.temp_folder.strip() or TEMP_FOLDER_DEFAULT)
+                temp_folder_id = ensure_temp_folder(token, state, temp_folder_name)
                 file_id = upload_to_drive(token, file_path, target_mime, temp_folder_id, existing_id=None)
 
-        state["files"][key] = {
-            "file_id": file_id,
-            "kind": kind,
-            "mtime": current_mtime,
-            "size": current_size,
-            "name": file_path.name,
-            "path": str(file_path),
-            "temp_folder_id": temp_folder_id,
-        }
+        if not args.no_cache:
+            state["files"][key] = {
+                "file_id": file_id,
+                "kind": kind,
+                "mtime": current_mtime,
+                "size": current_size,
+                "name": file_path.name,
+                "path": str(file_path),
+                "temp_folder_id": temp_folder_id,
+                "sha256": current_hash,
+            }
         save_state(state)
 
         open_google_file(file_id, kind)

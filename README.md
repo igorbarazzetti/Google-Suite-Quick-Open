@@ -1,81 +1,72 @@
 # Google Suite Quick Open
 
-[![Status](https://img.shields.io/badge/platform-Windows-0078d4?logo=windows)](https://www.microsoft.com/windows)
-[![Python](https://img.shields.io/badge/python-3.10+-blue?logo=python)](https://www.python.org/)
+Abra documentos do Office com duplo clique no navegador, direto em:
 
-Google Suite Quick Open abre arquivos locais no navegador usando Google Docs, Google Sheets e Google Slides com duplo clique no Windows.
+- Google Docs (`.doc`, `.docx`)
+- Google Sheets (`.xls`, `.xlsx`)
+- Google Slides (`.ppt`, `.pptx`)
 
-## Visao geral
+É para quem quer continuar usando arquivo local, mas editar no Google sem abrir manualmente o Drive.
 
-- Suporta:
-  - Documentos Word: `.doc`, `.docx`
-  - Planilhas Excel: `.xls`, `.xlsx`
-  - Apresentacoes PowerPoint: `.ppt`, `.pptx`
-- Detecta o tipo de arquivo e abre no app Google correspondente.
-- Faz upload para Google Drive autenticado.
-- Abre automaticamente o arquivo no modo de edicao do navegador.
-- Cria pasta temporaria no Drive e faz limpeza automatica de arquivos antigos.
+## O que esse app faz
 
-## Preview
+- Associa os tipos de arquivo no Windows para abrir com um clique no projeto.
+- Faz upload seguro do arquivo para sua conta Google.
+- Abre automaticamente no navegador no modo de edição.
+- Mantém os arquivos em uma pasta temporaria do Google Drive.
+- Limpa arquivos antigos automaticamente (padrão: 24 horas).
 
-### 1) Abrindo Word no Google Docs
-![Abertura de docx no Google Docs](assets/screenshots/01-open-doc.png)
+## Como instalar (2 minutos)
 
-### 2) Abrindo Excel no Google Sheets
-![Abertura de xlsx no Google Sheets](assets/screenshots/02-open-sheet.png)
-
-### 3) Abrindo PowerPoint no Google Slides
-![Abertura de pptx no Google Slides](assets/screenshots/03-open-slides.png)
-
-### 4) Icones oficiais aplicados no Windows
-![Icones do Google Sheets e Google Docs no Windows](assets/screenshots/04-file-association.png)
-
-## Instalar
+1. Abra PowerShell na pasta do projeto.
+2. Rode:
 
 ```powershell
-cd "C:\Users\igor\OneDrive\Documentos\Windows Apps\GoogleDriveQuickOpen"
+cd "C:\caminho\do\GoogleDriveQuickOpen"
 .\install.ps1
 ```
 
-Depois de instalado, os arquivos estao associados para abrir diretamente no Google Suite Quick Open.
+Feito. A partir daí os tipos suportados passam a abrir no Google Suite Quick Open.
 
-## Opcoes da linha de comando
+## Como usar
 
-- `--kind doc|sheet|slide`: força o destino (Docs, Sheets, Slides).
-- `--temp-folder "nome"`: pasta temporaria no Drive.
-- `--retention-hours N`: tempo de vida dos arquivos em horas.
-- `--no-cleanup`: desativa a limpeza automatica.
-- `--no-cache`: forca upload novo a cada abertura.
+- Dê dois cliques em qualquer arquivo suportado.
+- O app abre o navegador no arquivo convertido para o app certo.
+- Se quiser mudar a pasta temporaria ou tempo de limpeza, use a opção de linha de comando.
 
-## Credenciais do Google
+## Opcoes de linha de comando
 
-1. Ative Google Drive API no Google Cloud.
-2. Crie credencial OAuth2 (Desktop).
-3. Baixe o JSON para:
-   - `GoogleDriveQuickOpen/client_secret.json`
+- `--kind doc|sheet|slide`: define explicitamente o destino.
+- `--temp-folder "nome"`: nome da pasta no Drive para uploads temporarios.
+- `--retention-hours N`: tempo de permanencia em horas.
+- `--no-cleanup`: desativa a limpeza dos arquivos antigos.
+- `--no-cache`: cria novo upload a cada abertura.
 
-Esse arquivo **nao** deve ser enviado para o Git.
+## Configuracao do Google
 
-## Pasta temporaria no Drive
+1. Crie credencial OAuth no Google Cloud (Desktop app).
+2. Copie o arquivo para `GoogleDriveQuickOpen/client_secret.json`.
 
-- Padrão: `GoogleDriveQuickOpen Temp`
-- Retencao padrao: `24 horas` (ajustavel com `--retention-hours`)
+O JSON deve ficar fora do Git (`.gitignore` já protege esse arquivo).
 
-## Estrutura do projeto
+## Screenshots
 
-- `GoogleDriveQuickOpen/open_in_google.py` - script principal.
-- `GoogleDriveQuickOpen/install.ps1` - instalador/registrador de associacoes.
-- `GoogleDriveQuickOpen/uninstall.ps1` - limpeza de associacoes.
-- `GoogleDriveQuickOpen/README.md` - guia detalhado.
-- `.gitignore` - protege credenciais locais.
+![Abrindo DOCX no Google Docs](assets/screenshots/01-open-doc.png)
 
-## Requisitos
+![Abrindo XLSX no Google Sheets](assets/screenshots/02-open-sheet.png)
+
+![Abrindo PPTX no Google Slides](assets/screenshots/03-open-slides.png)
+
+![Icones no Windows](assets/screenshots/04-file-association.png)
+
+## Para quem quer só usar
 
 - Windows 10/11
 - Python 3.10+
 - Conta Google com Drive ativo
+- PowerShell
 
-## Troubleshooting rapido
+## Tirou duvida?
 
-- Se algum arquivo abrir no app errado, ajuste associacao em Configuracoes do Windows.
-- Se o Google solicitar login, confirme a conta e aceite o consentimento da API Drive.
+- Arquivo abriu no app errado: ajuste a associacao nas configuracoes do Windows.
+- Se o login pedir confirmacao, aceite o acesso da app ao Google Drive.

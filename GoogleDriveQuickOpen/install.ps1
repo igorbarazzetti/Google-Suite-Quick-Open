@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 $ProjectDir = $PSScriptRoot
 $AppDisplayName = "Google Suite Quick Open"
 $AppRegistryName = "GoogleSuiteQuickOpen"
+$AppVersion = "1.1.0"
 $InstallDir = Join-Path $env:LOCALAPPDATA "GoogleDriveQuickOpen"
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
@@ -148,10 +149,28 @@ function Save-OfficialIcon {
     }
 }
 
+function Ensure-FileIcon {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Url,
+        [Parameter(Mandatory)][string]$Kind
+    )
+
+    if (Test-Path $Path) {
+        return $true
+    }
+
+    if (Save-OfficialIcon -Path $Path -Url $Url) {
+        return $true
+    }
+
+    return (New-FileIcon -Path $Path -Kind $Kind)
+}
+
 function New-FileIcon {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][ValidateSet("doc", "sheet")][string]$Kind
+        [Parameter(Mandatory)][ValidateSet("doc", "sheet", "slide")][string]$Kind
     )
 
     try {
@@ -200,20 +219,32 @@ function New-FileIcon {
                 $g.FillRectangle($headerBrush, $pageX + 24, $pageY + 26, 88, 18)
                 $g.FillRectangle($softBrush, $pageX + 24, $pageY + 70, 28, 108)
 
-                foreach ($x in 0..3) {
-                    $xPos = $pageX + 24 + ($x * 28)
-                    $g.DrawLine($linePen, $xPos, $pageY + 70, $xPos, $pageY + 178)
-                }
-                foreach ($y in 0..4) {
-                    $yPos = $pageY + 70 + ($y * 27)
-                    $g.DrawLine($linePen, $pageX + 24, $yPos, $pageX + 124, $yPos)
-                }
+            foreach ($x in 0..3) {
+                $xPos = $pageX + 24 + ($x * 28)
+                $g.DrawLine($linePen, $xPos, $pageY + 70, $xPos, $pageY + 178)
             }
-            else {
-                $accent = [System.Drawing.Color]::FromArgb(66, 133, 244)
-                $soft = [System.Drawing.Color]::FromArgb(226, 237, 253)
-                $headerBrush = New-Object System.Drawing.SolidBrush $accent
-                $lineBrush = New-Object System.Drawing.SolidBrush $soft
+            foreach ($y in 0..4) {
+                $yPos = $pageY + 70 + ($y * 27)
+                $g.DrawLine($linePen, $pageX + 24, $yPos, $pageX + 124, $yPos)
+            }
+        }
+        elseif ($Kind -eq "slide") {
+            $accent = [System.Drawing.Color]::FromArgb(255, 124, 51)
+            $soft = [System.Drawing.Color]::FromArgb(255, 244, 235, 230)
+            $headerBrush = New-Object System.Drawing.SolidBrush $accent
+            $lineBrush = New-Object System.Drawing.SolidBrush $soft
+
+            $g.FillRectangle($headerBrush, $pageX + 24, $pageY + 26, 82, 18)
+            for ($i = 0; $i -lt 6; $i++) {
+                $width = if ($i % 2 -eq 0) { 92 } else { 108 }
+                $g.FillRectangle($lineBrush, $pageX + 24, $pageY + 72 + ($i * 22), $width, 10)
+            }
+        }
+        else {
+            $accent = [System.Drawing.Color]::FromArgb(66, 133, 244)
+            $soft = [System.Drawing.Color]::FromArgb(226, 237, 253)
+            $headerBrush = New-Object System.Drawing.SolidBrush $accent
+            $lineBrush = New-Object System.Drawing.SolidBrush $soft
 
                 $g.FillRectangle($headerBrush, $pageX + 24, $pageY + 26, 82, 18)
                 foreach ($i in 0..5) {
@@ -267,20 +298,18 @@ $sheetIconPath = Join-Path $InstallDir "google_sheets.ico"
 $docIconPath = Join-Path $InstallDir "google_docs.ico"
 $slideIconPath = Join-Path $InstallDir "google_slides.ico"
 if (
-    -not (Save-OfficialIcon -Path $sheetIconPath -Url "https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_96dp.png") `
-    -and -not (New-FileIcon -Path $sheetIconPath -Kind sheet) `
+    -not (Ensure-FileIcon -Path $sheetIconPath -Url "https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_96dp.png" -Kind "sheet") `
     -and -not (Test-Path $sheetIconPath)
 ) {
     $sheetIconPath = ""
 }
 if (
-    -not (Save-OfficialIcon -Path $docIconPath -Url "https://www.gstatic.com/images/branding/product/2x/docs_2020q4_96dp.png") `
-    -and -not (New-FileIcon -Path $docIconPath -Kind doc) `
+    -not (Ensure-FileIcon -Path $docIconPath -Url "https://www.gstatic.com/images/branding/product/2x/docs_2020q4_96dp.png" -Kind "doc") `
     -and -not (Test-Path $docIconPath)
 ) {
     $docIconPath = ""
 }
-if (-not (Save-OfficialIcon -Path $slideIconPath -Url "https://www.gstatic.com/images/branding/product/2x/slides_2020q4_96dp.png")) {
+if (-not (Ensure-FileIcon -Path $slideIconPath -Url "https://www.gstatic.com/images/branding/product/2x/slides_2020q4_96dp.png" -Kind "slide")) {
     $slideIconPath = ""
 }
 
@@ -419,7 +448,7 @@ elseif ($docIconPath) {
 elseif ($sheetIconPath) {
     New-ItemProperty -Path $uninstallKey -Name "DisplayIcon" -Value ('"{0}",0' -f $sheetIconPath) -PropertyType String -Force | Out-Null
 }
-New-ItemProperty -Path $uninstallKey -Name "DisplayVersion" -Value "1.0.0" -PropertyType String -Force | Out-Null
+New-ItemProperty -Path $uninstallKey -Name "DisplayVersion" -Value $AppVersion -PropertyType String -Force | Out-Null
 New-ItemProperty -Path $uninstallKey -Name "Publisher" -Value "Google" -PropertyType String -Force | Out-Null
 New-ItemProperty -Path $uninstallKey -Name "InstallLocation" -Value $InstallDir -PropertyType String -Force | Out-Null
 New-ItemProperty -Path $uninstallKey -Name "UninstallString" -Value ('powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f (Join-Path $InstallDir "uninstall.ps1")) -PropertyType String -Force | Out-Null
