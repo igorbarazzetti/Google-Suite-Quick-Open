@@ -27,18 +27,8 @@ Google Suite Quick Open abre arquivos locais no navegador usando Google Docs, Go
 ### 3) Abrindo PowerPoint no Google Slides
 ![Abertura de pptx no Google Slides](assets/screenshots/03-open-slides.png)
 
-### 4) App instalado no contexto de arquivos
-![Menu do app no Windows](assets/screenshots/04-file-association.png)
-
-## Como colocar seus prints
-
-1. Abra o app e gere seus captures de tela.
-2. Salve as imagens na pasta `assets/screenshots/` com os seguintes nomes:
-   - `01-open-doc.png`
-   - `02-open-sheet.png`
-   - `03-open-slides.png`
-   - `04-file-association.png`
-3. Commit e push.
+### 4) Icones oficiais aplicados no Windows
+![Icones do Google Sheets e Google Docs no Windows](assets/screenshots/04-file-association.png)
 
 ## Instalar
 
